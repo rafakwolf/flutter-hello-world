@@ -18,8 +18,7 @@ class _SecondPageState extends State<SecondPage> {
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)!.settings.arguments;
-    var currentItem = args as ListItem;
-    var title = currentItem.title;
+    var title = args.toString();
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.title),

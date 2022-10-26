@@ -1,7 +1,12 @@
+// ignore_for_file: prefer_const_constructors
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:ola_mundo/data/list_item.dart';
+import 'package:ola_mundo/api/brapi.dart';
+import 'package:ola_mundo/data/stock.dart';
+import 'package:ola_mundo/data/stocks_test.dart';
 import 'package:ola_mundo/widget/list_item_widget.dart';
-import 'data/items_builder.dart';
 import 'navigation_drawer.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -23,16 +28,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<ListItem> items = List.from(listItems);
+  final String stockTickers = List.from(stocksList).join(",");
+
+  Future<List> getStocks() async {
+    var strStocks = await getStocksData(stockTickers);
+    var stocks = jsonDecode(strStocks);
+
+    return stocks['results'];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
@@ -40,19 +46,42 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       drawer: const NavigationDrawer(),
-      body: AnimatedList(
-        initialItemCount: items.length,
-        itemBuilder:
-            (BuildContext context, int index, Animation<double> animation) {
-          return ListItemWidget(
-              item: items[index],
-              animation: animation,
-              onClicked: () {
-                Navigator.pushNamed(context, "/second",
-                    arguments: items[index]);
-              });
-        },
-      ),
+      body: FutureBuilder<List>(
+          future: getStocks(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              // print(snapshot.error);
+              return Center(
+                child: Text("Erro ao carregar as ações"),
+              );
+            }
+
+            if (snapshot.hasData) {
+              return ListView.builder(
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  var currentItem = snapshot.data![index];
+                  return ListItemWidget(
+                      item: Stock(
+                          currentItem['symbol'],
+                          currentItem['shortName'],
+                          currentItem['longName'],
+                          currentItem['regularMarketPrice'] == null
+                              ? 0.0
+                              : currentItem['regularMarketPrice'].toDouble(),
+                          currentItem['logourl']),
+                      onClicked: () {
+                        Navigator.pushNamed(context, "/second",
+                            arguments: currentItem);
+                      });
+                },
+              );
+            }
+
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }),
     );
   }
 }
